@@ -48,6 +48,12 @@ class BinaryReader:
 		self.buf = buf
 		self.endian = endian
 
+	def align_to(self, alignment):
+		old = self.tell()
+		mod = old % alignment
+		if mod != 0:
+			self.seek(alignment - mod, SEEK_CUR)
+
 	def align(self):
 		old = self.tell()
 		new = (old + 3) & -4
