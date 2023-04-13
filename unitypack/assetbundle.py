@@ -12,11 +12,11 @@ SIGNATURE_RAW = "UnityRaw"
 SIGNATURE_WEB = "UnityWeb"
 SIGNATURE_FS = "UnityFS"
 
-ArchiveCompressionTypeMask = (1 << 6) - 1
-ArchiveBlocksAndDirectoryInfoCombined = 1 << 6
-ArchiveBlocksInfoAtTheEnd = 1 << 7
-ArchiveOldWebPluginCompatibility = 1 << 8
-ArchiveBlockInfoNeedPaddingAtStart = 1 << 9
+CompressionTypeMask = (1 << 6) - 1
+BlocksAndDirectoryInfoCombined = 1 << 6
+BlocksInfoAtTheEnd = 1 << 7
+OldWebPluginCompatibility = 1 << 8
+BlockInfoNeedPaddingAtStart = 1 << 9
 
 class AssetBundle:
 	def __init__(self, environment):
@@ -105,25 +105,22 @@ class AssetBundle:
 
 	def load_unityfs(self, buf):
 		self.file_size = buf.read_int64()
-		print(f'file_size {self.file_size:,}')
 		self.ciblock_size = buf.read_uint() # compressedBlocksInfoSize
-		print(f'ciblock_size {self.ciblock_size:,}')
 		self.uiblock_size = buf.read_uint() # uncompressedBlocksInfoSize
-		print(f'uiblock_size {self.uiblock_size:,}')
 		flags = self.flags = buf.read_uint()
-		compression = CompressionType(flags & ArchiveCompressionTypeMask)
+		compression = CompressionType(flags & CompressionTypeMask)
 		print('compression', compression)
-		# print('ArchiveCompressionTypeMask', (flags & ArchiveCompressionTypeMask) != 0)
-		print('ArchiveBlocksAndDirectoryInfoCombined', (flags & ArchiveBlocksAndDirectoryInfoCombined) != 0)
-		print('ArchiveBlocksInfoAtTheEnd', (flags & ArchiveBlocksInfoAtTheEnd) != 0)
-		print('ArchiveOldWebPluginCompatibility', (flags & ArchiveOldWebPluginCompatibility) != 0)
-		has_padding_at_start = (flags & ArchiveBlockInfoNeedPaddingAtStart) != 0
-		print('kArchiveBlockInfoNeedPaddingAtStart', has_padding_at_start)
+		# print('CompressionTypeMask', (flags & CompressionTypeMask) != 0)
+		print('BlocksAndDirectoryInfoCombined', (flags & BlocksAndDirectoryInfoCombined) != 0)
+		print('BlocksInfoAtTheEnd', (flags & BlocksInfoAtTheEnd) != 0)
+		print('OldWebPluginCompatibility', (flags & OldWebPluginCompatibility) != 0)
+		has_padding_at_start = (flags & BlockInfoNeedPaddingAtStart) != 0
+		print('BlockInfoNeedPaddingAtStart', has_padding_at_start)
 
 		if self.format_version >= 7:
 			buf.align_to(16)
 
-		eof_metadata = self.flags & ArchiveBlocksInfoAtTheEnd
+		eof_metadata = self.flags & BlocksInfoAtTheEnd
 		if eof_metadata:
 			orig_pos = buf.tell()
 			buf.seek(-self.ciblock_size, 2)
@@ -149,15 +146,15 @@ class AssetBundle:
 			name = blk.read_string()
 			nodes.append((ofs, size, status, name))
 
+		if has_padding_at_start:
+			buf.align_to(16)
+
 		storage = ArchiveBlockStorage(blocks, buf)
 		for ofs, size, status, name in nodes:
 			storage.seek(ofs)
 			asset = Asset.from_bundle(self, storage)
 			asset.name = name
 			self.assets.append(asset)
-
-		if has_padding_at_start:
-			buf.align_to(16)
 
 		# Hacky
 		self.name = self.assets[0].name
