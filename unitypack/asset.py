@@ -109,6 +109,8 @@ class Asset:
 			return
 
 		buf = self._buf
+		print('name', self.name)
+		print('ofs', self._buf_ofs)
 		buf.seek(self._buf_ofs)
 		buf.endian = ">"
 
@@ -116,11 +118,32 @@ class Asset:
 		self.file_size = buf.read_uint()
 		self.format = buf.read_uint()
 		self.data_offset = buf.read_uint()
-
+		print('metadata_size', self.metadata_size)
+		print('file_size', self.file_size)
+		print('data_offset', self.data_offset)
+		print('format', self.format)
+		print('TELL', buf.tell())
 		if self.format >= 9:
-			self.endianness = buf.read_uint()
-			if self.endianness == 0:
-				buf.endian = "<"
+			self.endianness = buf.read_byte()
+			buf.read_byte() # reserved
+			buf.read_byte() # reserved
+			buf.read_byte() # reserved
+
+		print('endianness TELL', self.endianness, buf.tell())
+		if self.format >= 22:
+			# large files supprot
+			self.metadata_size = buf.read_uint()
+			self.file_size = buf.read_int64()
+			self.data_offset = buf.read_int64()
+			buf.read_int64() # unknown
+
+		if self.endianness == 0:
+			buf.endian = "<"
+
+		print('lfs TELL', buf.tell())
+		print('metadata_size', self.metadata_size)
+		print('file_size', self.file_size)
+		print('data_offset', self.data_offset)
 
 		self.tree.load(buf)
 

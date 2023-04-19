@@ -118,8 +118,9 @@ class TypeMetadata:
 		if format is None:
 			format = self.asset.format
 		self.generator_version = buf.read_string()
+		print(self.generator_version)
 		self.target_platform = RuntimePlatform(buf.read_uint())
-
+		print(self.target_platform)
 		if format >= 13:
 			has_type_trees = buf.read_boolean()
 			num_types = buf.read_int()
